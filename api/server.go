@@ -3,18 +3,22 @@ package api
 import (
 	"encoding/json"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 	"jnorms.dev/common"
+	"jnorms.dev/database"
 	"jnorms.dev/routes"
 	"log"
 )
 
 type Server struct {
 	Config *common.Config
+	DB     *gorm.DB
 }
 
 func (server *Server) Start() {
-
 	server.loadEnvConfigs()
+
+	server.startDBConnection()
 
 	server.loadRoutes()
 }
@@ -38,7 +42,16 @@ func (server *Server) loadEnvConfigs() {
 	}
 
 	err = json.Unmarshal(envJson, &server.Config)
+
+	if err != nil {
+		log.Fatal("Error unmarshal env json")
+	}
+
 	err = json.Unmarshal(envJson, &server.Config.Database)
+
+	if err != nil {
+		log.Fatal("Error unmarshal env json database config", err)
+	}
 }
 
 func (server *Server) loadRoutes() {
@@ -50,4 +63,12 @@ func (server *Server) loadRoutes() {
 	r.Api()
 
 	r.Engine.Run(":" + r.Config.Port)
+}
+
+func (server *Server) startDBConnection() {
+	db := &database.Database{
+		Database: &server.Config.Database,
+	}
+
+	server.DB = db.Connect()
 }
